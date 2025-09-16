@@ -1,4 +1,4 @@
-import { express, cors, PORT, connectDB, logger } from "./config/imports.js";
+import { express, cors, PORT, connectDB } from "./config/imports.js";
 
 // Kết nối DB
 connectDB();
@@ -15,4 +15,4 @@ app.get("/", (req, res) => {
 });
 
 // Server
-app.listen(PORT, () => logger.info(`Server running on port ${PORT}`));
+app.listen(PORT, () => console.log(`🚀 Server running on port ${PORT}`));

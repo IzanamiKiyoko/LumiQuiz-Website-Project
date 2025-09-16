@@ -1,0 +1,401 @@
+body {
+  margin: 0;
+  font-family: "Poppins", sans-serif;
+  background: #b9e9ff;
+}
+
+.app {
+  padding: 0px;
+  width: 100vw;
+  height: 100vh;
+  overflow: auto;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: #cfbaf0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  width: 100%;
+  position: static;
+  top: 0;
+  left: 0;
+}
+
+.logo {
+  width: 90px;
+  height: 90px;
+  margin-left: 20px;
+}
+
+.icon {
+  width: 20px;
+  height: 20px;
+  vertical-align: middle;
+  margin-right: 5px;
+}
+
+.title {
+  font-size: 25px;
+  font-weight: bold;
+}
+
+.players-count {
+  font-size: 18px;
+  padding-right: 40px;
+}
+
+.main {
+  display: flex;
+  margin: 20px 60px 20px 60px;
+  padding-top: 20px;
+  height: calc(100vh - 160px);
+  justify-content: center;
+  ;
+}
+
+.landscape-warning {
+  display: none;
+  /* ẩn mặc định */
+}
+
+/* --- Khi xoay ngang (landscape) --- */
+@media screen and (orientation: landscape) {
+  .landscape-warning {
+    display: none;
+  }
+
+  .header,
+  .main {
+    display: flex;
+  }
+}
+
+/* --- Khi xoay dọc (portrait) --- */
+@media screen and (orientation: portrait) {
+  .landscape-warning {
+    display: flex;
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+    padding: 20px 30px;
+    border-radius: 12px;
+    background: #fff4e8;
+    color: black;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  }
+
+  .header,
+  .main {
+    display: none;
+  }
+}
+
+/* LEFT */
+.pin-card {
+  flex: 2;
+  background: #fff4e8;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+}
+
+.pin-top-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 20px;
+  background: #fbf8cc;
+  padding: 10px 0 10px 0;
+  width: 100%;
+  border-top-right-radius: 15px;
+  border-top-left-radius: 15px;
+  border-bottom: 2px solid black;
+}
+
+.pin-game-info {
+  padding-left: 20px;
+  display: flex;
+  align-items: center;
+  min-width: 25%;
+}
+
+.text-game-detail {
+  margin: 2px 0;
+  word-wrap: break-word;
+  width: 100%;
+}
+
+.game-thumbnail {
+  width: 100px;
+  height: 60px;
+  border-radius: 10px;
+  margin-right: 15px;
+}
+
+.pin-code-detail {
+  padding-right: 20px;
+  min-width: 25%;
+}
+
+.pin-img {
+  width: 100px;
+  height: 100px;
+}
+
+@media (max-width: 700px) {
+  .pin-img {
+    width: 40px;
+    height: 40px;
+  }
+}
+
+@media (max-width: 600px) {
+
+  .pin-game-info {
+    width: 27%;
+  }
+
+  .pin-code-detail {
+    width: 27%;
+  }
+}
+
+@media (max-height: 600px) {
+  .main {
+    height: 100vh;
+  }
+}
+
+@media (max-height: 400px) {
+  .main {
+    height: calc(100vh + 150px);
+  }
+}
+
+@media (max-height: 200px) {
+  .main {
+    height: calc(100vh + 200px);
+  }
+}
+
+.pin-player-list {
+  text-align: center;
+  margin-top: 10px;
+  width: 100%;
+  height: calc(100% - 220px);
+}
+
+.pin-label {
+  font-size: 16px;
+  margin: 2px 0;
+}
+
+.pin-number {
+  font-size: 48px;
+  color: #7161ef;
+  margin: 10px 0;
+  margin: 2px 0;
+}
+
+.pin-actions button {
+  border: none;
+  background: none;
+  cursor: pointer;
+  width: 20px;
+  height: 20px;
+}
+
+.waiting {
+  margin-top: 20px;
+}
+
+.join {
+  color: #666;
+}
+
+.players {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin: 20px 0;
+}
+
+.player {
+  background: #d8cfff;
+  padding: 6px 12px;
+  border-radius: 10px;
+}
+
+.btn {
+  background: #98f5e1;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 16px;
+  margin-left: 10px;
+}
+
+/* Sidebar.css */
+.app {
+  font-family: sans-serif;
+}
+
+/* Sidebar.css */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 80%;
+  /* nhỏ hơn trên mobile */
+  max-width: 400px;
+  /* giới hạn trên màn lớn */
+  height: 100%;
+  background: #ffeef7;
+  box-shadow: -2px 0 5px rgba(0, 0, 0, 0.2);
+  transition: transform 0.3s ease;
+  z-index: 1000;
+  overflow: auto;
+  /* Mặc định trượt ra ngoài hoàn toàn */
+  transform: translateX(100%);
+}
+
+.sidebar.open {
+  transform: translateX(0);
+  /* Trượt vào */
+}
+
+@media (min-width: 768px) {
+  .sidebar {
+    width: 400px;
+    /* màn lớn thì rộng hơn */
+  }
+}
+
+.sidebar h2 {
+  margin-top: 0;
+  background: #fbf8cc;
+  padding: 10px 0 10px 10px;
+  width: 100%;
+  border-bottom: 2px solid black;
+  margin-bottom: 0;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s;
+  z-index: 900;
+}
+
+.overlay.show {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.enter-pin-card {
+  background: #fff4e8;
+  border-radius: 15px;
+  text-align: center;
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.1);
+  margin-top: 20px;
+  margin-left: 100px;
+  margin-right: 100px;
+  width: 50%;
+  min-width: 400px;
+  max-width: 500px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 20px;
+  min-height: 450px;
+  position: relative
+}
+
+.overlay_loading {
+  position: absolute;
+  inset: 0; /* tương đương top:0; right:0; bottom:0; left:0; */
+  background: rgba(241, 192, 232, 0.4);
+  backdrop-filter: blur(2px); /* 🌫️ làm mờ nền phía dưới (tuỳ chọn) */
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.enter-pin-icon {
+  width: 150px;
+  height: 150px;
+}
+
+.loader {
+    animation: rotate 1s infinite;
+    height: 50px;
+    width: 50px;
+  }
+
+  .loader:before,
+  .loader:after {
+    border-radius: 50%;
+    content: "";
+    display: block;
+    height: 20px;
+    width: 20px;
+  }
+  .loader:before {
+    animation: ball1 1s infinite;
+    background-color: #fff;
+    box-shadow: 30px 0 0 #ff3d00;
+    margin-bottom: 10px;
+  }
+  .loader:after {
+    animation: ball2 1s infinite;
+    background-color: #ff3d00;
+    box-shadow: 30px 0 0 #fff;
+  }
+
+  @keyframes rotate {
+    0% { transform: rotate(0deg) scale(0.8) }
+    50% { transform: rotate(360deg) scale(1.2) }
+    100% { transform: rotate(720deg) scale(0.8) }
+  }
+
+  @keyframes ball1 {
+    0% {
+      box-shadow: 30px 0 0 #ff3d00;
+    }
+    50% {
+      box-shadow: 0 0 0 #ff3d00;
+      margin-bottom: 0;
+      transform: translate(15px, 15px);
+    }
+    100% {
+      box-shadow: 30px 0 0 #ff3d00;
+      margin-bottom: 10px;
+    }
+  }
+
+  @keyframes ball2 {
+    0% {
+      box-shadow: 30px 0 0 #fff;
+    }
+    50% {
+      box-shadow: 0 0 0 #fff;
+      margin-top: -20px;
+      transform: translate(15px, 15px);
+    }
+    100% {
+      box-shadow: 30px 0 0 #fff;
+      margin-top: 0;
+    }
+  }
+  
