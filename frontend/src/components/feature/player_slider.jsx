@@ -38,31 +38,38 @@ const Button = styled.button`
     padding: 5px;
     font-weight: bold;
 `;
-function PlayerSlider({ players, host }) {
+function PlayerSlider({ players, host, kickPlayer =  null, enableMenu = false }) {
     return (
         <div>
-            <PlayerCard key={0} name={host} color={"#f1c0e8"} role={0} />
+            <PlayerCard key={0} name={host} color={"#f1c0e8"} role={0} enableMenu={enableMenu}/>
             {players.map((p, i) => (
-                <PlayerCard key={i+1} name={p} color={i % 2 === 0 ? "#dfe7fd" : "#cddafd"} role={1} />
+                <PlayerCard 
+                key={i+1} 
+                name={p} 
+                color={i % 2 === 0 ? "#dfe7fd" : "#cddafd"} 
+                role={1} 
+                kickPlayer={() => kickPlayer?.(p)}
+                enableMenu={enableMenu} />
+                
             ))}
         </div>
     );
 }
 
-function PlayerCard({ name, color, role }) {
+function PlayerCard({ name, color, role, kickPlayer = null, enableMenu = true }) {
     const [open, setOpen] = useState(false);
 
     return (
         <Card style={{ background: color }}>
             {name}
-            {role===1 ?
+            {enableMenu && role===1 ?
             (
                 <MenuButton onClick={() => setOpen(!open)}>⋯</MenuButton>
             ): null}
 
-            {open && role===1 && (
+            {enableMenu && open && role===1 && (
                 <Panel>
-                    <Button>kick</Button>
+                    <Button onClick={kickPlayer}>Kick</Button>
                 </Panel>
             )}
         </Card>

@@ -201,16 +201,18 @@ body {
   margin: 2px 0;
 }
 
-.pin-actions button {
-  border: none;
-  background: none;
-  cursor: pointer;
-  width: 20px;
-  height: 20px;
+.pin-actions {
+  display: flex;
+  justify-content: center;
+  gap: 10px;
+  align-items: center;
 }
 
 .waiting {
   margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .join {
@@ -399,3 +401,29 @@ body {
     }
   }
   
+  .waiting_ani {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  display: block;
+  margin:10px 30px 0 50px;
+  position: relative;
+  color: black;
+  box-sizing: border-box;
+  animation: animloader 1s linear infinite alternate;
+}
+
+@keyframes animloader {
+  0% {
+    box-shadow: -38px -12px ,  -14px 0,  14px 0, 38px 0;
+  }
+  33% {
+    box-shadow: -38px 0px, -14px -12px,  14px 0, 38px 0;
+  }
+  66% {
+    box-shadow: -38px 0px , -14px 0, 14px -12px, 38px 0;
+  }
+  100% {
+    box-shadow: -38px 0 , -14px 0, 14px 0 , 38px -12px;
+  }
+}

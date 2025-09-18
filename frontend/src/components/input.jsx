@@ -1,7 +1,12 @@
 import React, { useState } from "react";
 
-function Input({hint = "", type = "text"}) {
-  const [value, setValue] = useState("");
+function Input({ hint = "", type = "text", onChange , defaultValue = "", keyDown = null }) {
+  const [value, setValue] = useState(defaultValue);
+
+  const handleChange = (e) => {
+    setValue(e.target.value);       // ✅ Cập nhật state bên trong
+    if (onChange) onChange(e.target.value); // ✅ Gửi ra ngoài nếu cần
+  };
 
   return (
     <div style={wrapperStyle} className={value ? "focused" : ""}>
@@ -17,7 +22,8 @@ function Input({hint = "", type = "text"}) {
         style={inputStyle}
         type={type}
         value={value}
-        onChange={(e) => setValue(e.target.value)}
+        onChange={handleChange}
+        onKeyDown={keyDown}
         onFocus={(e) => e.target.parentElement.classList.add("focused")}
         onBlur={(e) =>
           e.target.parentElement.classList.toggle("focused", !!e.target.value)
@@ -25,7 +31,7 @@ function Input({hint = "", type = "text"}) {
       />
     </div>
   );
-};
+}
 
 // 🎨 Enhanced Gradient Styles
 const wrapperStyle = {
@@ -131,7 +137,7 @@ if (typeof document !== 'undefined') {
 }
 
 // Enhanced component với className để apply hover effects
-function EnhancedInput({hint = "", type = "text"}) {
+function EnhancedInput({hint = "", type = "text", defaultValue = ""}) {
   const [value, setValue] = useState("");
 
   return (
@@ -150,7 +156,7 @@ function EnhancedInput({hint = "", type = "text"}) {
       <input
         style={inputStyle}
         type="text"
-        value={value}
+        value={defaultValue ?? value}
         onChange={(e) => setValue(e.target.value)}
         onFocus={(e) => e.target.parentElement.classList.add("focused")}
         onBlur={(e) =>

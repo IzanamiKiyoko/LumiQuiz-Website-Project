@@ -1,17 +1,125 @@
-import React, { useState, useEffect } from "react";
-import { useParams } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import "./lobby.css";
-//component
+import socket from "../../services/socket.js";
+//components
 import Input from "../../components/input.jsx";
+import Modal from "../../components/modal.jsx";
 export default function WelcomePin() {
-    const [pin, setPin] = useState("");
+    const { rname, lobby_id } = useParams();
+    const [pin, setPin] = useState(lobby_id || "");
     const [name, setName] = useState("");
-    const [loading, setLoading] = useState(true);
-    const { role } = useParams();
+    const [host, setHost] = useState("");
+    const [players, setPlayers] = useState([]);
+    const [joined, setJoined] = useState(false);
+    const [mode, setMode] = useState("");
+    const [loading, setLoading] = useState(false);
+    const [modal, setModal] = useState({ show: false, title: "", message: "" });
+    const navigate = useNavigate();
+    const notifyDuplicateName = () => {
+        setModal({
+            show: true,
+            title: "Warning",
+            message: "This name already exists in the lobby. Please choose a different name.",
+            buttons: [
+                {
+                    label: "Confirm",
+                    onClick: () => {
+                        setModal({ ...modal, show: false });
+                    },
+                },
+            ],
+        });
+    };
+    const notifyInput = () => {
+        setModal({
+            show: true,
+            title: "Warning",
+            message: "Please fill in all required fields.",
+            buttons: [
+                {
+                    label: "Confirm",
+                    onClick: () => {
+                        setModal({ ...modal, show: false });
+                    },
+                },
+            ],
+        });
+    };
+    const handleKeyDown = (e) => {
+        if (e.key === "Enter") {
+            EnterLobby();
+        }
+    };
     useEffect(() => {
-        const t = setTimeout(() => setLoading(false), 2200);
-        return () => clearTimeout(t);
+        const onRoomUpdate = (data) => {
+            setPin(data.pin);
+            setHost(data.host);
+            setPlayers(data.players);
+            setJoined(true);
+        };
+
+        const onRoomClosed = () => {
+            alert("💔 Host đã rời phòng, phòng đã đóng.");
+            window.location.reload();
+        };
+
+        socket.on("roomUpdate", onRoomUpdate);
+        socket.on("roomClosed", onRoomClosed);
+
+        return () => {
+            socket.off("roomUpdate", onRoomUpdate);
+            socket.off("roomClosed", onRoomClosed);
+        };
     }, []);
+
+    const createRoom = () => {
+        if (name.trim() !== "") {
+            socket.emit("createRoom", name, (newPin) => {
+                if (newPin.success) {
+                    setPin(newPin.pin);
+                    setMode("host");
+                    setHost(name);
+                    setTimeout(function () {
+                        navigate(`/lobby/room`, { state: { name: name, pin: newPin.pin, role: "host" } });
+                    }, 3000);
+                }
+                else {
+                    alert("Error creating room, please try again.");
+                    setLoading(false);
+                }
+            });
+        }
+    };
+
+    const joinRoom = () => {
+        if (name.trim() !== "" && pin.trim() !== "") {
+            socket.emit("joinRoom", { pin, name }, (res) => {
+                if (!res.success) {
+                    if (res.error === "001") {
+                        notifyDuplicateName();
+                        setLoading(false);
+                    }
+                }
+                else {
+                    setMode("player");
+                    setTimeout(function () {
+                        navigate(`/lobby/room`, { state: { name: name, pin: pin, role: "client" } });
+                    }, 3000);
+                }
+            });
+        }
+    };
+
+    const EnterLobby = () => {
+        if (name.trim() === "" || (rname === "client" && pin.trim() === "")) {
+            notifyInput();
+            return;
+        }
+        setLoading(true);
+        if (rname === "host") createRoom();
+        else joinRoom();
+    };
 
     return (
         <div className="app">
@@ -25,14 +133,27 @@ export default function WelcomePin() {
             <div className="main">
                 <div className="enter-pin-card">
                     <img src="/img/icon.png" className="enter-pin-icon" />
-                    { role === "client" ? <Input hint={"Enter PIN"} /> : "" }
-                    <Input hint={"Enter Username"} />
-                    <button className="btn">Enter Lobby</button>
-                    <div class="overlay_loading">
-                        <span className="loader"></span>
-                    </div>
+                    {rname === "client" && (
+                        <Input hint="Enter PIN" onChange={setPin} defaultValue={lobby_id} keyDown={handleKeyDown}/>
+                    )}
+                    <Input hint="Enter Username" onChange={setName} keyDown={handleKeyDown}/>
+                    <button className="btn" onClick={EnterLobby}>
+                        Enter Lobby
+                    </button>
+                    {loading && (
+                        <div className="overlay_loading">
+                            <span className="loader"></span>
+                        </div>
+                    )}
                 </div>
             </div>
-        </div >
+            <Modal
+                show={modal.show}
+                onClose={() => setModal({ ...modal, show: false })}
+                title={modal.title}
+                message={modal.message}
+                buttons={modal.buttons}
+            />
+        </div>
     );
 }

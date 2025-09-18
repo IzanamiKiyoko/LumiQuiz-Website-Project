@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 //component
 import Switch from "../switch.jsx";
@@ -125,27 +125,6 @@ const sliderStyles = `
 }
 `;
 
-
-function openFullscreen() {
-  const elem = document.documentElement; // phần tử <html>
-  if (elem.requestFullscreen) {
-    elem.requestFullscreen();
-  } else if (elem.webkitRequestFullscreen) { // Safari
-    elem.webkitRequestFullscreen();
-  } else if (elem.msRequestFullscreen) { // IE11
-    elem.msRequestFullscreen();
-  }
-}
-
-function closeFullscreen() {
-  if (document.exitFullscreen) {
-    document.exitFullscreen();
-  } else if (document.webkitExitFullscreen) {
-    document.webkitExitFullscreen();
-  } else if (document.msExitFullscreen) {
-    document.msExitFullscreen();
-  }
-}
 const Slider = ({
   value = [0],
   onValueChange,
@@ -186,6 +165,27 @@ function SettingSlider() {
   const [musicValue, setMusicValue] = useState(50);
   const [soundValue, setSoundValue] = useState(50);
   const [timePerSlideValue, setTimePerSlideValue] = useState(23);
+  const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+  const openFullscreen = () => {
+    const elem = document.documentElement;
+    if (elem.requestFullscreen) elem.requestFullscreen();
+    else if (elem.webkitRequestFullscreen) elem.webkitRequestFullscreen();
+    else if (elem.msRequestFullscreen) elem.msRequestFullscreen();
+  };
+
+  const closeFullscreen = () => {
+    if (document.exitFullscreen) document.exitFullscreen();
+    else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+    else if (document.msExitFullscreen) document.msExitFullscreen();
+  };
+
+  const handleToggle = (state) => state ? openFullscreen() : closeFullscreen();
+
+  useEffect(() => {
+    const handleFullscreenChange = () => {setIsFullscreen(!!document.fullscreenElement);}
+    document.addEventListener("fullscreenchange", handleFullscreenChange);
+    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+  }, []);
   return (
     <div>
       <Card>
@@ -227,9 +227,8 @@ function SettingSlider() {
           size="medium"
           label="Fullscreen mode"
           labelPosition="left"
-          onToggle={(state) => {
-            state === true ? openFullscreen() : closeFullscreen();
-          }}
+          on={isFullscreen}
+          onToggle={handleToggle}
         />
       </Card>
     </div>
