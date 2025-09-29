@@ -1,12 +1,97 @@
 import styled from "styled-components";
 import { useState } from "react";
+// services
+import socket from "../../services/socket.js";
+
+const handleKickPlayer = (playerName, hostName, pin, confirmNotify) => {
+  if (!playerName) return;
+  if (playerName === hostName) {
+    alert("You cannot kick the host.");
+    return;
+  }
+  confirmNotify("Warning", "Are you sure to kick this player " + playerName, () => {
+    socket.emit("requestKickPlayer", pin, playerName, (data) => {
+      if (!data.success) {
+        confirmNotify("Warning", "Fail when kicking player " + playerName);
+      }
+    });
+  });
+};
+
+function PlayerSlider({ players, host, enableMenu = false, name, pin, confirmNotify = null }) {
+  const [activePlayer, setActivePlayer] = useState(false);
+  const rm_host = players.filter((p) => p !== host);
+  const reverse_players = [...rm_host].reverse();
+  return (
+    <div>
+      <PlayerCard
+        key={host}
+        name={host}
+        color={"#f1c0e8"}
+        role={0}
+        enableMenu={enableMenu}
+        activePlayer={activePlayer}
+        setActivePlayer={setActivePlayer}
+        hostName={host}
+        pin={pin}
+        setModal={confirmNotify}
+      />
+      {reverse_players.map((p, i) => (
+        <PlayerCard
+          key={p}
+          name={p}
+          color={p === name ? "#B9FBC0" : i % 2 === 0 ? "#dfe7fd" : "#cddafd"}
+          role={1}
+          enableMenu={enableMenu}
+          activePlayer={activePlayer}
+          setActivePlayer={setActivePlayer}
+          hostName={host}
+          pin={pin}
+        setModal={confirmNotify}
+        />
+      ))}
+    </div>
+  );
+}
+
+function PlayerCard({
+  name,
+  color,
+  role,
+  enableMenu,
+  activePlayer,
+  setActivePlayer,
+  hostName,
+  pin,
+  setModal = null,
+}) {
+  const isOpen = activePlayer === name;
+
+  return (
+    <Card style={{ background: color }} name={"card_"+name}>
+      {name}
+      {enableMenu && role === 1 ? (
+        <MenuButton name={"menu_"+name}
+          onClick={() => setActivePlayer(isOpen ? null : name)}
+        >
+          ⋯
+        </MenuButton>
+      ) : null}
+
+      {enableMenu && isOpen && role === 1 && (
+        <Panel>
+          <Button onClick={() => {handleKickPlayer(name, hostName, pin, setModal)}}>Kick</Button>
+        </Panel>
+      )}
+    </Card>
+  );
+}
 
 const Card = styled.div`
   position: relative;
   padding: 12px;
   color: black;
   line-height: 1;
-  background: #dfe7fd;
   font-weight: bold;
 `;
 
@@ -26,54 +111,17 @@ const Panel = styled.div`
   border-radius: 6px;
   font-size: 14px;
   display: flex;
-   justify-content: center;
+  justify-content: center;
 `;
 
 const Button = styled.button`
-    background: #fb6f92;
-    color: black;
-    width: 75%;
-    border: none;
-    border-radius: 10px;
-    padding: 5px;
-    font-weight: bold;
+  background: #fb6f92;
+  color: black;
+  width: 75%;
+  border: none;
+  border-radius: 10px;
+  padding: 5px;
+  font-weight: bold;
 `;
-function PlayerSlider({ players, host, kickPlayer =  null, enableMenu = false }) {
-    return (
-        <div>
-            <PlayerCard key={0} name={host} color={"#f1c0e8"} role={0} enableMenu={enableMenu}/>
-            {players.map((p, i) => (
-                <PlayerCard 
-                key={i+1} 
-                name={p} 
-                color={i % 2 === 0 ? "#dfe7fd" : "#cddafd"} 
-                role={1} 
-                kickPlayer={() => kickPlayer?.(p)}
-                enableMenu={enableMenu} />
-                
-            ))}
-        </div>
-    );
-}
-
-function PlayerCard({ name, color, role, kickPlayer = null, enableMenu = true }) {
-    const [open, setOpen] = useState(false);
-
-    return (
-        <Card style={{ background: color }}>
-            {name}
-            {enableMenu && role===1 ?
-            (
-                <MenuButton onClick={() => setOpen(!open)}>⋯</MenuButton>
-            ): null}
-
-            {enableMenu && open && role===1 && (
-                <Panel>
-                    <Button onClick={kickPlayer}>Kick</Button>
-                </Panel>
-            )}
-        </Card>
-    );
-}
 
 export default PlayerSlider;

@@ -1,4 +1,5 @@
-import React, { useState } from "react";
+import { t } from "i18next";
+import React, { useState, useEffect } from "react";
 import styled, { css } from "styled-components";
 
 const sizes = {
@@ -17,12 +18,12 @@ const colors = {
 };
 
 const Wrapper = styled.div`
-   display: flex;
+  display: flex;
   align-items: center;
   gap: 0.75rem;
   justify-content: space-between;
   ${(p) => p.reverse && css`flex-direction: row-reverse;`}
-  width: 100%; /* để chiếm đủ chiều ngang cha */
+  width: 100%;
 `;
 
 const Button = styled.button`
@@ -74,8 +75,14 @@ const Switch = ({
   color = "blue",
   label = "",
   labelPosition = "right",
+  name="",
 }) => {
   const [state, setState] = useState(isOn);
+
+  // Đồng bộ state khi prop isOn thay đổi
+  useEffect(() => {
+    setState(isOn);
+  }, [isOn]);
 
   const handleToggle = () => {
     if (disabled) return;
@@ -85,22 +92,24 @@ const Switch = ({
   };
 
   return (
-    <Wrapper reverse={labelPosition === "left"}>
-      <Button
-        type="button"
-        role="switch"
-        aria-checked={state}
-        onClick={handleToggle}
-        on={state}
-        color={color}
-        size={size}
-        disabled={disabled}
-      >
-        <Dot size={size} on={state} />
-      </Button>
-
-      {label && <Label disabled={disabled}>{label}</Label>}
-    </Wrapper>
+    <div>
+      <Wrapper reverse={labelPosition === "left"}>
+        <Button
+          type="button"
+          role="switch"
+          aria-checked={state}
+          onClick={handleToggle}
+          on={state}
+          color={color}
+          size={size}
+          disabled={disabled}
+          name = {name}
+        >
+          <Dot size={size} on={state} />
+        </Button>
+        {label && <Label disabled={disabled}>{label}</Label>}
+      </Wrapper>
+    </div>
   );
 };
 

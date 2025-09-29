@@ -1,8 +1,6 @@
 import React from "react";
-
-export default function Modal({ show, onClose, title, message, buttons = [] }) {
+export default function Modal({ show, onClose, title, message, buttons = [], element_name = "" }) {
   if (!show) return null;
-
   const overlayStyle = {
     position: "fixed",
     top: 0,
@@ -13,7 +11,7 @@ export default function Modal({ show, onClose, title, message, buttons = [] }) {
     display: "flex",
     justifyContent: "center",
     alignItems: "center",
-    zIndex: 999,
+    zIndex: 1000,
   };
 
   const contentStyle = {
@@ -50,7 +48,7 @@ export default function Modal({ show, onClose, title, message, buttons = [] }) {
   const handleMouseOut = (e) => (e.target.style.background = "#ff6b81");
 
   return (
-    <div style={overlayStyle}>
+    <div style={overlayStyle} name={element_name}>
       <div style={contentStyle}>
         <h2>{title}</h2>
         <p>{message}</p>
@@ -62,6 +60,7 @@ export default function Modal({ show, onClose, title, message, buttons = [] }) {
               onClick={btn.onClick}
               onMouseOver={handleMouseOver}
               onMouseOut={handleMouseOut}
+              name={"modal_btn_"+btn.label}
             >
               {btn.label}
             </button>

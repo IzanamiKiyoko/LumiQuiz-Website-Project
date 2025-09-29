@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 
-const CopyButton = ({ textToCopy = "Hello World! 🌟\nĐây là văn bản demo để copy\nClick vào nút copy để thử!" }) => {
+const CopyButton = ({ textToCopy = "", name="" }) => {
   const [isAnimating, setIsAnimating] = useState(false);
   const [buttonState, setButtonState] = useState('idle'); // idle, copying, success
   const [statusText, setStatusText] = useState('Nhấn để copy văn bản');
@@ -86,6 +86,7 @@ const CopyButton = ({ textToCopy = "Hello World! 🌟\nĐây là văn bản demo
         onClick={handleCopy}
         onMouseEnter={handleMouseEnter}
         onMouseLeave={handleMouseLeave}
+        name={name}
       >
         {/* Copy Icon */}
         <svg 

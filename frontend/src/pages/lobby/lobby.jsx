@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { Users, Copy, EyeOff } from "lucide-react";
+import { Users } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import "./lobby.css";
 // components
 import PlayerSlider from "../../components/feature/player_slider.jsx";
@@ -9,17 +10,20 @@ import CopyButton from "../../components/copy_btn.jsx";
 import ShowHideButton from "../../components/hide_btn.jsx";
 import ShareButton from "../../components/share_btn.jsx";
 import Modal from "../../components/modal.jsx";
+import NameCard from "../../components/name_tag.jsx";
+import Toast from "../../components/toast_notify.jsx";
+// services
 import socket from "../../services/socket.js";
 export default function Lobby() {
-
+  const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
   const { name, pin, role } = location.state || {};
   if (!name) {
     navigate(`/lobby/${role || "client"}`);
   }
+
   const [playersCount, setPlayersCount] = useState(0);
-  const [volume, setVolume] = useState(50);
   const [gameinfo, setGameinfo] = useState({
     title: "Sample Game",
     slides: 10,
@@ -32,6 +36,9 @@ export default function Lobby() {
   const [joined, setJoined] = useState(false);
   const [hidePin, setHidePin] = useState(false);
   const [modal, setModal] = useState({ show: false, title: "", message: "" });
+  const [toast, setToast] = useState({ show: false, message: "", duration: 3000 });
+  const [initialSetting, setInitialSetting] = useState(null);
+  const [hostStatus, setHostStatus] = useState(false);
   const origin = window.location.origin;
   // --- Xử lý cập nhật room ---
   const handleRoomUpdate = (data) => {
@@ -43,110 +50,162 @@ export default function Lobby() {
       setHostName(data.host || "Host");
       setJoined(true);
       setHidePin(data.hide)
+      setHostStatus(data.isPlayWith)
+      if (data.isPlayWith) {
+        setPlayers((prevPlayers) => {
+          const updated = [data.host, ...prevPlayers];
+          setPlayersCount(updated.length);
+          return updated;
+        });
+      }
+      else {
+        setPlayers((prevPlayers) => {
+          const updated = prevPlayers.filter((p) => p !== data.host);
+          setPlayersCount(updated.length);
+          return updated;
+        });
+      }
     }
     else {
       navigate(`/lobby/${role || "client"}`); // nếu pin không đúng thì quay về trang nhập pin
       alert("Phòng không tồn tại hoặc đã đóng.");
     }
   };
-  const handleLeaveLobbyNotify = () => {
-    setModal({
-      show: true,
-      title: role === "host" ? "Warning" : "Confirm",
-      message: "Are youu sure you want to leave the lobby?" + (role === "host" ? " (As host, leaving will close the lobby for all players.)" : ""),
-      buttons: [
-        {
-          label: "Confirm",
-          onClick: () => {
-            setModal({ ...modal, show: false });
-          },
-        },
-        {
-          label: "Cancel",
-          onClick: () => setModal({ ...modal, show: false }),
-        },
-      ],
-    });
-  };
   const confirmNotify = (title, message, action = null) => {
     setModal({
       show: true,
-      title: title || "Warning",
+      title: title || t("warning"),
       message: message,
       buttons: [
         {
-          label: "Confirm",
+          label: t("confirm"),
           onClick: () => {
             setModal({ ...modal, show: false });
             action?.();
-          },
-        },
+          }
+        }
       ],
     });
   };
-  const handleLeaveLobby = () => {
-    socket.emit("requestLeaveLobby", pin, (data) => {
-
-    });
-  }
-  const handleKickPlayer = (playerName) => {
-    console.log("Attempting to kick player:", playerName);
-    if (!playerName) return;
-    if (playerName === hostName) {
-      alert("You cannot kick the host.");
-      return;
-    }
-    confirmNotify("Warning", "Are you sure to kick this player " + playerName, () => {
-      socket.emit("requestKickPlayer", pin, playerName, (data) => {
-        if (!data.success) {
-          confirmNotify("Warning", "Fail when kicking player " + playerName);
+  const confirmCancelNotify = (title, message, action = null) => {
+    setModal({
+      show: true,
+      title: title || t("warning"),
+      message: message,
+      buttons: [
+        {
+          label: t("confirm"),
+          onClick: () => {
+            setModal({ ...modal, show: false });
+            action?.();
+          }
+        },
+        {
+          label: t("cancel"),
+          onClick: () => {
+            setModal({ ...modal, show: false });
+          }
         }
-      });
+      ],
+    });
+  };
+  const handleSetToast = (message, duration) => {
+    console.log("Toast set:", { message, duration });
+    setToast({
+      show: true,
+      message: message,
+      duration: duration || 3000
     });
 
   }
   useEffect(() => {
-    // Nhận update từ server
-    socket.on("roomUpdate", handleRoomUpdate);
-    // Nhận phản hồi ẩn pin
-    socket.on("acceptRequestHidePin", (data) => setHidePin(data.hide));
-    // Nhận phản hồi đá người chơi
-    socket.on("responseKickPlayer", (data) => {
+    const handleSomeoneJoin = (data) => {
+      if (data?.name) {
+        setPlayers((prevPlayers) => {
+          const updated = [data.name, ...prevPlayers];
+          setPlayersCount(updated.length);
+          return updated;
+        });
+      }
+    };
+
+    const handleAcceptHidePin = (data) => setHidePin(data.hide);
+
+    const handleSomeoneLeave = (data, message) => {
+      if (data.name === name) {
+        confirmNotify(t("notification"), message, () =>
+          navigate(`/lobby/${role || "client"}`)
+        );
+        return;
+      }
       setPlayers((prevPlayers) => {
         const updated = prevPlayers.filter((p) => p !== data.name);
         setPlayersCount(updated.length);
         return updated;
       });
-      if (data.name === name) {
-        confirmNotify("Alert", "You have been kicked from the lobby.", () => navigate(`/lobby/${role || "client"}`))
-      }
-    });
-    // Nếu host đóng phòng
-    const handleRoomClosed = () => {
-      alert("💔 Host đã rời phòng, phòng đã đóng.");
-      navigate(`/lobby/${role || "client"}`);
     };
-    socket.on("roomClosed", handleRoomClosed);
+    const handleCloseLobby = () => {
+      confirmNotify(t("notification"), localStorage.getItem("language") === "vi" ? "Chủ phòng đã đóng phòng chờ" : "The host has closed the lobby.", () =>
+        navigate(`/lobby/${role || "client"}`)
+      );
+      return;
+    }
 
-    // Lấy trạng thái hiện tại khi join
+    const handlePlayWith = (data) => {
+      console.log("host: " + hostName)
+      setHostStatus(data.isPlayWith);
+      if (data.isPlayWith) {
+        setPlayers((prevPlayers) => {
+          const updated = [hostName, ...prevPlayers];
+          setPlayersCount(updated.length);
+          return updated;
+        });
+        setToast({
+          show: true,
+          message: localStorage.getItem("language") === "vi" ? `${hostName} đã tham gia chơi cùng mọi người` : `${hostName} joined in playing with everyone.`,
+          duration: 3000
+        });
+      }
+      else {
+        setPlayers((prevPlayers) => {
+          const updated = prevPlayers.filter((p) => p !== hostName);
+          setPlayersCount(updated.length);
+          return updated;
+        });
+        setToast({
+          show: true,
+          message: localStorage.getItem("language") === "vi" ? `${hostName} đã chuyển trạng thái người xem` : `${hostName} changed status to viewer`,
+          duration: 3000
+        });
+      }
+    }
+    socket.on("someoneJoin", handleSomeoneJoin);
+    socket.on("acceptRequestHidePin", handleAcceptHidePin);
+    socket.on("responseKickPlayer", (data) => handleSomeoneLeave(data, localStorage.getItem("language") === "vi" ? "Bạn đã bị đá khỏi phòng chờ" : "You have been kicked from the lobby."));
+    socket.on("responseCloseLobby", handleCloseLobby);
+    socket.on("responseSomeoneLeave", (data) => handleSomeoneLeave(data, localStorage.getItem("language") === "vi" ? "Rời phòng chờ thành công" : "Leave the lobby successfully."));
+    socket.on("responePlayWith", handlePlayWith)
     socket.emit("getCurrentLobbyState", pin, (data) => {
       if (data?.success) {
-        handleRoomUpdate({ pin: pin, host: data.host, players: data.players, hide: data.hide });
+        handleRoomUpdate({
+          pin,
+          host: data.room.host,
+          players: data.room.players,
+          hide: data.room.hide,
+        });
+        setInitialSetting(data.setting || null);
       }
     });
-
-    // Cleanup khi rời component
+    i18n.changeLanguage(localStorage.getItem("language") || "vi");
     return () => {
-      socket.off("roomUpdate", handleRoomUpdate);
-      socket.off("roomClosed", handleRoomClosed);
+      socket.off("someoneJoin", handleSomeoneJoin);
+      socket.off("acceptRequestHidePin", handleAcceptHidePin);
+      socket.off("responseKickPlayer", handleSomeoneLeave);
+      socket.off("responseSomeoneLeave", handleSomeoneLeave);
+      socket.off("responseCloseLobby", handleCloseLobby);
+      socket.off("responePlayWith",handlePlayWith)
     };
-
-    window.addEventListener("beforeunload", handleBeforeUnload);
-
-    return () => {
-      window.removeEventListener("beforeunload", handleBeforeUnload);
-    };
-  }, [pin, navigate, role]);
+  }, [hostName]);
 
   const requestHidePin = (isHidden) => {
     // Yêu cầu tất cả client ẩn/hiện pin 
@@ -156,20 +215,21 @@ export default function Lobby() {
       }
     });
   }
+
   return (
     <div className="app">
       <div className="landscape-warning">
-        Vui lòng xoay ngang màn hình để có trải nghiệm tốt nhất.
+        {t("rotate_device")}
       </div>
 
       <header className="header">
         <img src="/img/logo.png" alt="Logo" className="logo" />
-        <div className="title">{hostName}'s lobby</div>
-        <div className="players-count" onClick={() => {
+        <div className="title" name="title">{t("lobby_title", { name: hostName })}</div>
+        <div className="players-count" name="player_count" onClick={() => {
           setOpen(!open);
           setNav(0);
         }}>
-          <Users className="icon" /> {playersCount + 1}
+          <Users className="icon" /> {playersCount + (hostStatus ? 0 : 1)}
         </div>
       </header>
 
@@ -190,74 +250,100 @@ export default function Lobby() {
             </div>
             <img src="/img/icon.png" className="pin-img" />
             <div className="pin-code-detail">
-              <p className="pin-label">pin code:</p>
-              <h2 className="pin-number">{hidePin ? "******" : pin}</h2>
+              <p className="pin-label">{t("pin_code")}</p>
+              <h2 className="pin-number" name="pin_code">{hidePin ? "******" : pin}</h2>
               <div className="pin-actions">
-                <CopyButton textToCopy={pin} style={{ width: "10px", height: "10px" }} />
-                {role === "host" ? <ShowHideButton onToggle={(isHidden) => requestHidePin(isHidden)} /> : ""}
-                <ShareButton textToCopy={`Join ${hostName}'s game using PIN: ${pin}. URL: ${origin}/lobby/client/${pin}`} />
+                <CopyButton textToCopy={pin} style={{ width: "10px", height: "10px" }} name={"btn_copy_pin"} />
+                {role === "host" ? <ShowHideButton name={"btn_hide_pin"} onToggle={(isHidden) => requestHidePin(isHidden)} /> : ""}
+                <ShareButton textToCopy={`Join ${hostName}'s game using PIN: ${pin}. URL: ${origin}/lobby/client/${pin}`} name={"btn_share_lobby"}/>
               </div>
             </div>
           </div>
 
           <div className="pin-player-list">
-            {playersCount === 0 ? <h3 className="waiting">Waiting for players <span className="waiting_ani"></span></h3> : ""}
+            {playersCount === 0 ? <h3 className="waiting">{t("waiting_for_player")} <span className="waiting_ani"></span></h3> : ""}
             <div
               className="players"
               onClick={() => {
                 setOpen(!open);
                 setNav(0);
               }}
+              id="player-list"
             >
-              {players?.map((p, idx) => (
-                <span key={idx} className="player">
-                  {p}
-                </span>
+              {players?.map((p) => (
+                <NameCard key={p} name={p} />
               ))}
             </div>
           </div>
 
-          {role === "host" ? <button className="btn" disabled={playersCount === 0}>Start game</button> : ""}
-          {role === "host" ? <button className="btn">Play with everyone</button> : ""}
+          {role === "host" ? <button className="btn" disabled={playersCount === 0}>{t("start_game")}</button> : ""}
+          {role === "host" ? <button className="btn" name="playWith" onClick={() => {
+            socket.emit("requestPlayWith", pin, (data) => {
+              if (!data?.success) {
+                if (localStorage.getItem("language") === "vi")
+                  confirmNotify("Cảnh báo", "Lỗi không thể tham gia cùng mọi người");
+                else
+                  confirmNotify("Warning", "Error cannot join everyone");
+              }
+            })
+          }}>{hostStatus?t("spectator_view"):t("play_with_everyone")}</button> : ""}
           <button
             className="btn"
             onClick={() => {
               setOpen(!open);
               setNav(1);
             }}
+            name="btn_setting"
           >
-            Setting
-          </button>
-          <button
-            className="btn"
-            onClick={handleLeaveLobbyNotify}
-            style={{ background: "red", color: "white" }}
-          >
-            Leave lobby
+            {t("setting")}
           </button>
         </div>
 
-        <div className={`sidebar ${open ? "open" : ""}`}>
-          {nav === 0 ? <h2>Players</h2> : <h2>Setting</h2>}
+        <div name="nav_board" className={`sidebar ${open ? "open" : ""}`}>
+          {nav === 0 ? <h2 name="nav_title">{t("players")}</h2> : <h2 name="nav_title">{t("setting")}</h2>}
           {nav === 0 ? (
-            <PlayerSlider players={players} host={hostName} kickPlayer={handleKickPlayer} enableMenu={role === "host" ? true : false} />
+            <PlayerSlider
+              players={players}
+              host={hostName}
+              name={name}
+              enableMenu={role === "host" ? true : false}
+              confirmNotify={confirmNotify}
+              pin={pin} />
           ) : (
-            <SettingSlider />
+            <SettingSlider
+              pin={pin}
+              name={name}
+              role={name === hostName ? 0 : 1}
+              confirmNotify={confirmNotify}
+              confirmCancelNotify={confirmCancelNotify}
+              toast={handleSetToast}
+              initialSetting={initialSetting}
+              clearSetting={() => setInitialSetting(null)} />
           )}
         </div>
 
         <div
           className={`overlay ${open ? "show" : ""}`}
           onClick={() => setOpen(false)}
+          name="overlay"
         ></div>
 
         <div className="right-panel" style={{ display: "none" }}></div>
+        {toast.show && (
+          <Toast
+            message={toast.message || "Error"}
+            duration={toast.duration || 3000}
+            onClose={() => setToast({ ...toast, show: false })}
+            name={"toast_notification"}
+          />
+        )}
         <Modal
           show={modal.show}
           onClose={() => setModal({ ...modal, show: false })}
           title={modal.title}
           message={modal.message}
           buttons={modal.buttons}
+          element_name={"modal"}
         />
       </div>
     </div>

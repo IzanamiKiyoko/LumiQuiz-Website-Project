@@ -51,6 +51,11 @@ export default function WelcomePin() {
             EnterLobby();
         }
     };
+    function hasEmoji(text) {
+        // Regex tìm emoji unicode phổ biến
+        const emojiRegex = /\p{Extended_Pictographic}/u;
+        return emojiRegex.test(text);
+    }
     useEffect(() => {
         const onRoomUpdate = (data) => {
             setPin(data.pin);
@@ -105,9 +110,25 @@ export default function WelcomePin() {
                     setMode("player");
                     setTimeout(function () {
                         navigate(`/lobby/room`, { state: { name: name, pin: pin, role: "client" } });
-                    }, 3000);
+                    }, 1000);
                 }
             });
+        }
+        else {
+            setModal({
+                show: true,
+                title: "Warning",
+                message: "Please fill in all required fields.",
+                buttons: [
+                    {
+                        label: "Confirm",
+                        onClick: () => {
+                            setModal({ ...modal, show: false });
+                        },
+                    },
+                ],
+            });
+            return;
         }
     };
 
@@ -116,7 +137,40 @@ export default function WelcomePin() {
             notifyInput();
             return;
         }
+        if (name.length > 15) {
+            setModal({
+                show: true,
+                title: "Warning",
+                message: "Username is too long. Please enter a name with 15 characters or less.",
+                buttons: [
+                    {
+                        label: "Confirm",
+                        onClick: () => {
+                            setModal({ ...modal, show: false });
+                        },
+                    },
+                ],
+            });
+            return;
+        }
+        if (hasEmoji(name)) {
+            setModal({
+                show: true,
+                title: "Warning",
+                message: "Username contains invalid characters. Please avoid using emojis.",
+                buttons: [
+                    {
+                        label: "Confirm",
+                        onClick: () => {
+                            setModal({ ...modal, show: false });
+                        },
+                    },
+                ],
+            });
+            return;
+        }
         setLoading(true);
+
         if (rname === "host") createRoom();
         else joinRoom();
     };
@@ -134,10 +188,10 @@ export default function WelcomePin() {
                 <div className="enter-pin-card">
                     <img src="/img/icon.png" className="enter-pin-icon" />
                     {rname === "client" && (
-                        <Input hint="Enter PIN" onChange={setPin} defaultValue={lobby_id} keyDown={handleKeyDown}/>
+                        <Input hint="Enter PIN" onChange={setPin} defaultValue={lobby_id} keyDown={handleKeyDown} element_name="input pin" />
                     )}
-                    <Input hint="Enter Username" onChange={setName} keyDown={handleKeyDown}/>
-                    <button className="btn" onClick={EnterLobby}>
+                    <Input hint="Enter Username" onChange={setName} keyDown={handleKeyDown} element_name="input name" />
+                    <button className="btn" onClick={EnterLobby} name="btn enter lobby">
                         Enter Lobby
                     </button>
                     {loading && (
@@ -153,6 +207,7 @@ export default function WelcomePin() {
                 title={modal.title}
                 message={modal.message}
                 buttons={modal.buttons}
+                element_name="modal"
             />
         </div>
     );

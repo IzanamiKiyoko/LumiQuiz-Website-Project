@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-function Input({ hint = "", type = "text", onChange , defaultValue = "", keyDown = null }) {
+function Input({ hint = "", type = "text", onChange , defaultValue = "", keyDown = null, element_name =  ""}) {
   const [value, setValue] = useState(defaultValue);
 
   const handleChange = (e) => {
@@ -28,6 +28,7 @@ function Input({ hint = "", type = "text", onChange , defaultValue = "", keyDown
         onBlur={(e) =>
           e.target.parentElement.classList.toggle("focused", !!e.target.value)
         }
+        name ={element_name}
       />
     </div>
   );

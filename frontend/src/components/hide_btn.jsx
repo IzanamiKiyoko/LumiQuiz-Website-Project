@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Eye, EyeOff } from "lucide-react";
 
-export default function HideButton({ onToggle }) {
+export default function HideButton({ onToggle, name="" }) {
     const [hidden, setHidden] = useState(false);
     const handleClick = () => {
         const newHidden = !hidden;
@@ -12,6 +12,7 @@ export default function HideButton({ onToggle }) {
         <button
             className={`hide-btn ${hidden ? "hidden" : ""}`}
             onClick={handleClick}
+            name={name}
         >
             <span className={`icon-wrapper ${!hidden ? "show" : "hide"}`}>
                 <Eye className="icon" />

@@ -21,58 +21,62 @@ io.on("connection", (socket) => {
 
   // --- Host tạo phòng ---
   socket.on("createRoom", (hostName, callback) => {
-    const pin = generatePIN();
+    let pin;
+
+    // Sinh pin mới cho đến khi chưa tồn tại trong rooms
+    do {
+      pin = generatePIN();
+    } while (rooms[pin]); // nếu rooms[pin] tồn tại, sinh lại
+
+    // Tạo phòng mới
     rooms[pin] = {
       host: hostName,
       players: [],
       hidePin: false,
+      timePerSlide: 20,
+      minusPoint: false,
+      isPlayWith: false,
     };
-    socket.join(pin);
-    console.log(`🌟 ${hostName} đã tạo phòng ${pin}`);
-    io.to(pin).emit("roomUpdate", {
-      pin,
-      host: hostName,
-      players: Object.values(rooms[pin].players),
-      hide: rooms[pin].hidePin,
-    });
 
+    // Socket tự động join vào phòng
+    socket.join(pin);
+
+    console.log(`🌟 ${hostName} đã tạo phòng ${pin}`);
+    //console.log(rooms);
+    // Gửi phản hồi về client
     if (callback) callback({ success: true, pin });
   });
 
-  // --- Player join phòng ---
+
   socket.on("joinRoom", ({ pin, name }, callback) => {
     if (!rooms[pin]) {
-      if (callback) callback({ success: false, message: "Phòng không tồn tại" });
-      return;
+      return callback?.({ success: false, message: "Phòng không tồn tại" });
     }
+
     const lowerName = name.toLowerCase();
     const isHost = lowerName === rooms[pin].host.toLowerCase();
-    const isPlayer = rooms[pin].players.some(
+    const isPlayer = Object.values(rooms[pin].players).some(
       n => n.toLowerCase() === lowerName
     );
 
     if (isHost || isPlayer) {
-      if (callback) callback({
+      return callback?.({
         success: false,
         message: "Name Duplicate",
         error: "001"
       });
-      return;
     }
 
-    rooms[pin].players[socket.id] = name;
+    rooms[pin].players = {
+      [socket.id]: name,
+      ...rooms[pin].players
+    };
+
     socket.join(pin);
-
     console.log(`${name} đã vào phòng ${pin} 🏡`);
-    console.log(rooms[pin].players);
 
-    io.to(pin).emit("roomUpdate", {
-      pin,
-      host: rooms[pin].host,
-      players: Object.values(rooms[pin].players),
-    });
-
-    if (callback) callback({ success: true });
+    callback?.({ success: true });
+    io.to(pin).emit("someoneJoin", { name });
   });
 
   // --- Lấy trạng thái hiện tại của lobby ---
@@ -84,14 +88,11 @@ io.on("connection", (socket) => {
 
     const room = rooms[pin];
     const players = Object.values(room.players);
-    // Emit realtime cho tất cả members
-    io.to(pin).emit("roomUpdate", {
-      pin,
-      host: room.host,
-      players,
+    if (callback) callback({
+      success: true,
+      room: { host: room.host, players, hide: rooms[pin].hidePin, isPlayWith: room.isPlayWith },
+      setting: { timePerSlide: room.timePerSlide, minusPoint: room.minusPoint }
     });
-
-    if (callback) callback({ success: true, host: room.host, players, hide: rooms[pin].hidePin });
   });
 
   // --- Player hoặc host yêu cầu danh sách ---
@@ -117,20 +118,80 @@ io.on("connection", (socket) => {
 
   socket.on("requestKickPlayer", (pin, name, callback) => {
     if (rooms[pin]) {
+      let player;
       for (const [key, value] of Object.entries(rooms[pin].players)) {
         if (value === name) {
+          player = rooms[pin].players[key];
           delete rooms[pin].players[key];
           break;
         }
       }
       if (callback) callback({ success: true });
       io.to(pin).emit("responseKickPlayer", { name });
+      socket.leave(player);
       console.log(`Đã đá ${name} khỏi phòng ${pin}`);
     } else {
       if (callback) callback({ success: false, message: "Phòng không tồn tại" });
     }
   });
+  // Rời lobby
+  socket.on("requestLeave", (pin, name, callback) => {
+    if (rooms[pin]) {
+      let player;
+      if (name === rooms[pin].host) {
+        io.to(pin).emit("responseCloseLobby");
+        delete rooms[pin];
+        console.log(`Host đã rời, phòng ${pin} đóng`);
+        return;
+      }
+      for (const [key, value] of Object.entries(rooms[pin].players)) {
+        if (value === name) {
+          player = rooms[pin].players[key];
+          delete rooms[pin].players[key];
+          break;
+        }
+      }
+      if (callback) callback({ success: true });
+      io.to(pin).emit("responseSomeoneLeave", { name });
+      socket.leave(player);
+      console.log(`${name} đã rời khỏi phòng ${pin}`);
+    } else {
+      if (callback) callback({ success: false, message: "Phòng không tồn tại" });
+    }
+  });
+  // Thay đổi thời gian mỗi slide
+  socket.on("requestChangeTimePerSlide", (pin, value, callback) => {
+    if (rooms[pin]) {
+      rooms[pin].timePerSlide = value;
+      if (callback) callback({ success: true });
+      io.to(pin).emit("responseChangeTimePerSlide", { value, host: rooms[pin].host });
+      console.log(`Lobby ${pin} đã đổi thời gian mỗi slide thành ${value}s`);
+    } else {
+      if (callback) callback({ success: false, message: "Phòng không tồn tại" });
+    }
+  });
+  // Bật/tắt tính năng trừ điểm
+  socket.on("requestMinusPoint", (pin, value, callback) => {
+    if (rooms[pin]) {
+      rooms[pin].minusPoint = value;
+      if (callback) callback({ success: true });
+      io.to(pin).emit("responseMinusPoint", { value, host: rooms[pin].host });
+      console.log(`Lobby ${pin} đã ${value ? "bật" : "tắt"} tính năng trừ điểm`);
+    } else {
+      if (callback) callback({ success: false, message: "Phòng không tồn tại" });
+    }
+  });
 
+  socket.on("requestPlayWith", (pin, callback) => {
+    if (!rooms[pin]) {
+      return callback?.({ success: false, message: "Phòng không tồn tại" });
+    }
+    const room = rooms[pin];
+    room.isPlayWith = !room.isPlayWith;
+
+    callback?.({ success: true });
+    io.to(pin).emit("responePlayWith", { isPlayWith: room.isPlayWith });
+  });
   // --- Disconnect ---
   socket.on("disconnect", () => {
     for (const pin in rooms) {
@@ -140,17 +201,14 @@ io.on("connection", (socket) => {
         delete room.players[socket.id];
 
         console.log(`${name} đã rời phòng ${pin}`);
-
+        socket.leave(pin);
         // Nếu host rời, đóng phòng
         if (name === room.host) {
-          io.to(pin).emit("roomClosed");
+          io.to(pin).emit("responseCloseLobby");
           delete rooms[pin];
+          console.log(rooms);
         } else {
-          io.to(pin).emit("roomUpdate", {
-            pin,
-            host: room.host,
-            players: Object.values(room.players),
-          });
+          io.to(pin).emit("responseSomeoneLeave", { name });
         }
         break; // tìm thấy room rồi thoát vòng lặp
       }

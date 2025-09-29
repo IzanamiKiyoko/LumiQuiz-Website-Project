@@ -1,171 +1,26 @@
 import styled from "styled-components";
 import { useState, useEffect } from "react";
-
+import { BadgeQuestionMark } from "lucide-react";
+import { useTranslation } from "react-i18next";
 //component
 import Switch from "../switch.jsx";
-const Card = styled.div`
-  position: relative;
-  padding: 15px;
-  color: black;
-  line-height: 1;
-  background: #98f5e1;
-  font-weight: bold;
-`;
+import Button from "../button.jsx";
+import Dropdown from "../dropdown.jsx";
+import Slider from "../slider.jsx";
+// services
+import socket from "../../services/socket.js";
 
-const sliderStyles = `
-.slider {
-    margin-top: 15px;
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
-  width: 100%;
-  height: 8px;
-  border-radius: 4px;
-  outline: none;
-  background: linear-gradient(
-    to right,
-    #fef3c7 0%,
-    #fed7aa var(--value, 50%),
-    #f9a8d4 var(--value, 50%),
-    #c7d2fe 100%
-  );
-  background-size: 100% 100%;
-  position: relative;
-  transition: all 0.2s ease;
-}
-
-.slider:hover {
-  background: linear-gradient(
-    to right,
-    #f59e0b 0%,
-    #f97316 var(--value, 50%),
-    #ec4899 var(--value, 50%),
-    #8b5cf6 100%
-  );
-}
-
-.slider::-webkit-slider-track {
-  -webkit-appearance: none;
-  appearance: none;
-  background: transparent;
-  cursor: pointer;
-  height: 8px;
-  border-radius: 4px;
-}
-
-.slider::-moz-range-track {
-  background: transparent;
-  cursor: pointer;
-  height: 8px;
-  border-radius: 4px;
-  border: none;
-}
-
-.slider::-webkit-slider-thumb {
-  -webkit-appearance: none;
-  appearance: none;
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  height: 18px;
-  width: 18px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-  transition: all 0.2s ease;
-  position: relative;
-}
-
-.slider::-moz-range-thumb {
-  background: linear-gradient(135deg, #fbbf24, #f59e0b);
-  height: 18px;
-  width: 18px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 2px solid #ffffff;
-  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.3);
-  transition: all 0.2s ease;
-}
-
-.slider:hover::-webkit-slider-thumb {
-  transform: scale(1.1);
-  background: linear-gradient(135deg, #f59e0b, #ea580c);
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
-}
-
-.slider:hover::-moz-range-thumb {
-  transform: scale(1.1);
-  background: linear-gradient(135deg, #f59e0b, #ea580c);
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.4);
-}
-
-.slider:active::-webkit-slider-thumb {
-  transform: scale(1.15);
-  background: linear-gradient(135deg, #ea580c, #dc2626);
-  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.5);
-}
-
-.slider:active::-moz-range-thumb {
-  transform: scale(1.15);
-  background: linear-gradient(135deg, #ea580c, #dc2626);
-  box-shadow: 0 6px 20px rgba(234, 88, 12, 0.5);
-}
-
-.slider:focus-visible {
-  outline: 2px solid #f59e0b;
-  outline-offset: 2px;
-}
-
-.slider:focus-visible::-webkit-slider-thumb {
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
-}
-
-.slider:focus-visible::-moz-range-thumb {
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.3);
-}
-`;
-
-const Slider = ({
-  value = [0],
-  onValueChange,
-  max = 100,
-  min = 0,
-  step = 1,
-  className = "",
-  unit = "",
-  ...props
-}) => {
-  const handleChange = (e) => {
-    const newValue = [Number.parseInt(e.target.value)];
-    onValueChange?.(newValue);
+function SettingSlider({ pin, name, role, confirmNotify, confirmCancelNotify, toast, initialSetting, clearSetting }) {
+  const { t, i18n } = useTranslation();
+  const changeLanguage = (lng) => {
+    i18n.changeLanguage(lng); // đổi ngôn ngữ
   };
-
-  return (
-    <div className={`relative flex w-full items-center ${className}`}>
-      <style dangerouslySetInnerHTML={{ __html: sliderStyles }} />
-      <div style={{ display: "flex", gap: "10px", alignItems: "center", justifyContent: "center" }}>
-        <input
-          type="range"
-          min={0}
-          max={max}
-          step={step}
-          value={value[0]}
-          onChange={handleChange}
-          className="slider"
-          style={{ "--value": `${Math.round((value[0] / max) * 100)}%` }}
-          {...props}
-        />
-        <p>{unit === "%" ? Math.round(((value[0] + min) / max) * 100) + unit : (value[0] + min) + unit}</p>
-      </div>
-    </div>
-  );
-};
-
-function SettingSlider() {
   const [musicValue, setMusicValue] = useState(50);
   const [soundValue, setSoundValue] = useState(50);
-  const [timePerSlideValue, setTimePerSlideValue] = useState(23);
+  const [timePerSlideValue, setTimePerSlideValue] = useState(initialSetting?.timePerSlide || 20);
   const [isFullscreen, setIsFullscreen] = useState(!!document.fullscreenElement);
+  const [language, setLanguage] = useState(localStorage.getItem("language") || "vi");
+  const [minusPoint, setMinusPoint] = useState(initialSetting?.minusPoint || false);
   const openFullscreen = () => {
     const elem = document.documentElement;
     if (elem.requestFullscreen) elem.requestFullscreen();
@@ -179,60 +34,173 @@ function SettingSlider() {
     else if (document.msExitFullscreen) document.msExitFullscreen();
   };
 
-  const handleToggle = (state) => state ? openFullscreen() : closeFullscreen();
+  const handleFullScreen = (state) => state ? openFullscreen() : closeFullscreen();
 
+  const handleSetTimePerSlide = (value) => {
+    setTimePerSlideValue(value);
+    socket.emit("requestChangeTimePerSlide", pin, value, (data) => {
+      if (!data.success) {
+        if (localStorage.getItem("language") === "vi")
+          confirmNotify("Cảnh báo", "Thay đổi thời gian mỗi slide thất bại");
+        else
+          confirmNotify("Warning", "Fail when changing time per slide");
+      }
+    });
+  }
   useEffect(() => {
-    const handleFullscreenChange = () => {setIsFullscreen(!!document.fullscreenElement);}
+    const handleFullscreenChange = () => { setIsFullscreen(!!document.fullscreenElement); }
     document.addEventListener("fullscreenchange", handleFullscreenChange);
-    return () => document.removeEventListener("fullscreenchange", handleFullscreenChange);
+
+
+    socket.on("responseChangeTimePerSlide", (data) => {
+      setTimePerSlideValue(data.value);
+      if (localStorage.getItem("language") === "vi")
+        toast(`${data.host} đã thay đổi thời gian mỗi slide thành ${data.value}s`, 3000);
+      else
+        toast(`${data.host} changed the time of each slide to ${data.value}s`, 3000);
+    });
+
+    socket.on("responseMinusPoint", (data) => {
+      setMinusPoint(data.value);
+      if (localStorage.getItem("language") === "vi")
+        toast(`${data.host} đã ${data.value ? `bật` : `tắt`} tính năng trừ điểm`, 3000);
+      else
+        toast(`${data.host} has turned ${data.value ? `on` : `off`} the minus point feature`, 3000);
+    });
+    return () => {
+      document.removeEventListener("fullscreenchange", handleFullscreenChange);
+      socket.off("responseChangeTimePerSlide");
+      socket.off("responseMinusPoint");
+    }
   }, []);
+  clearSetting?.();
   return (
     <div>
-      <Card>
-        <span>Music</span>
+      <Card name="st_music">
+        <span>{t("music")}</span>
         <Slider
           value={[musicValue]}
-          onValueChange={(newValue) => setMusicValue(newValue[0])}
+          onValueChange={(newValue) => { setMusicValue(newValue[0]); localStorage.setItem("musicVolume", newValue[0]) }}
           max={100}
           step={1}
           unit="%"
         />
       </Card>
 
-      <Card>
-        <span>Sound</span>
+      <Card name="st_sound">
+        <span>{t("sound")}</span>
         <Slider
           value={[soundValue]}
-          onValueChange={(newValue) => setSoundValue(newValue[0])}
+          onValueChange={(newValue) => { setSoundValue(newValue[0]); localStorage.setItem("soundVolume", newValue[0]) }}
           max={100}
           step={1}
           unit="%"
-        />
-      </Card>
-
-      <Card>
-        <span>Time per slide</span>
-        <Slider
-          value={[timePerSlideValue]}
-          onValueChange={(newValue) => setTimePerSlideValue(newValue[0])}
-          max={110}
-          min={10}
-          step={5}
-          unit="s"
         />
       </Card>
       <Card>
         <Switch
           color="blue"
           size="medium"
-          label="Fullscreen mode"
+          label={t("fullscreen")}
           labelPosition="left"
-          on={isFullscreen}
-          onToggle={handleToggle}
+          isOn={isFullscreen}
+          onToggle={handleFullScreen}
         />
       </Card>
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <span>{t("language")}</span>
+          <Dropdown label={language === "vi" ? "Tiếng Việt" : "English"} items={[
+            { label: "Tiếng Việt", onClick: () => { localStorage.setItem("language", "vi"); changeLanguage("vi"); } },
+            { label: "English", onClick: () => { localStorage.setItem("language", "en"); changeLanguage("en"); } },
+          ]} />
+        </div>
+      </Card>
+      <Card name="st_minusPoint">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <span>{t("minus_point")}</span>
+          <div style={{ width: "60%" }} name="info"> <BadgeQuestionMark onClick={() => {
+            if (localStorage.getItem("language") === "vi")
+              confirmNotify("Thông tin", "Khi bật tính năng này, mỗi câu trả lời sai sẽ bị trừ số điểm bị mất trong thanh điểm.");
+            else
+              confirmNotify("Infomation", "When this feature is enabled, Each wrong answer will deduct the lost points from the score bar.");
+          }} /> </div>
+          <Switch
+            name={"sw_minusPoint"}
+            color="blue"
+            size="medium"
+            label={""}
+            labelPosition="left"
+            isOn={minusPoint}
+            disabled={role != 0 ? true : false}
+            onToggle={(state) => {
+              socket.emit("requestMinusPoint", pin, state, (data) => {
+                setMinusPoint(state);
+                if (!data.success) {
+                  if (localStorage.getItem("language") === "vi")
+                    confirmNotify("Cảnh báo", state ? "Bật" : "Tắt" + "Tính năng trừ điểm thất bại");
+                  else
+                    confirmNotify("Warning", state ? "Enable" : "Disable" + "Minus point feature failed");
+                }
+              });
+            }}
+          />
+        </div>
+      </Card>
+      <Card name="st_tps">
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "10px" }}>
+          <span>{t("time_per_slide")}</span>
+          <Dropdown label={timePerSlideValue + "s"} items={[
+            { label: "10s", onClick: () => handleSetTimePerSlide(10) },
+            { label: "15s", onClick: () => handleSetTimePerSlide(15) },
+            { label: "20s", onClick: () => handleSetTimePerSlide(20) },
+            { label: "25s", onClick: () => handleSetTimePerSlide(25) },
+            { label: "30s", onClick: () => handleSetTimePerSlide(30) },
+            { label: "45s", onClick: () => handleSetTimePerSlide(45) },
+            { label: "60s", onClick: () => handleSetTimePerSlide(60) },
+          ]} disabled={role != 0 ? true : false} name={"dd_tps"} />
+        </div>
+      </Card>
+
+      <Card style={{ textAlign: "center" }}>
+        <Button children={t("leave_lobby")}
+          customStyle={`background: red`}
+          name={"btn_leave"}
+          onClick={() => {
+            if (!name) return;
+            {
+              localStorage.getItem("language") === "vi" ?
+                confirmCancelNotify("Cảnh báo", "Bạn có chắc chắn muốn rời phòng chờ?" + (role === 0 ? " (Với tư cách chủ phòng, rời phòng sẽ đóng phòng chờ với tất cả người chơi.)" : ""), () => {
+                  socket.emit("requestLeave", pin, name, (data) => {
+                    if (!data.success) {
+                      confirmNotify("Cảnh báo", "Rời phòng chờ thất bại");
+                    }
+                  });
+                }) :
+                confirmCancelNotify("Warning", "Are you sure you want to leave the lobby?" + (role === 0 ? " (As host, leaving will close the lobby for all players.)" : ""), () => {
+                  socket.emit("requestLeave", pin, name, (data) => {
+                    if (!data.success) {
+                      confirmNotify("Warning", "Fail when leaving lobby");
+                    }
+                  });
+                });
+            }
+          }} />
+      </Card>
+
     </div>
   );
 }
+
+const Card = styled.div`
+  position: relative;
+  padding: 15px;
+  color: black;
+  line-height: 1;
+  background: #98f5e1;
+  font-weight: bold;
+`;
+
+
 
 export default SettingSlider;
