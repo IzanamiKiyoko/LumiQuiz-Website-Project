@@ -1,13 +1,7 @@
-import mongoose from "mongoose";
+import { MongoClient } from "mongodb";
 
-const connectDB = async () => {
-  try {
-    const conn = await mongoose.connect(process.env.MONGO_URI);
-    console.log(`✅ MongoDB Connected: ${conn.connection.host}`);
-  } catch (error) {
-    console.error("❌ Error connecting to MongoDB:", error.message);
-    process.exit(1); // dừng app nếu lỗi
-  }
-};
+const client = new MongoClient("mongodb://localhost:27017");
+await client.connect();
+const db = client.db("LumiQuiz");
 
-export default connectDB;
+export default db;

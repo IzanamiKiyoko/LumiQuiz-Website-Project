@@ -18,22 +18,18 @@ export default function Lobby() {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const location = useLocation();
-  const { name, pin, role } = location.state || {};
+  const { name, pin, role, quizId } = location.state || {};
   if (!name) {
     navigate(`/lobby/${role || "client"}`);
   }
 
   const [playersCount, setPlayersCount] = useState(0);
-  const [gameinfo, setGameinfo] = useState({
-    title: "Sample Game",
-    slides: 10,
-    author: "none",
-  });
+  const [gameinfo, setGameinfo] = useState({});
   const [open, setOpen] = useState(false);
   const [nav, setNav] = useState(0);
   const [players, setPlayers] = useState([]); // luôn là array rỗng
   const [hostName, setHostName] = useState("Host");
-  const [joined, setJoined] = useState(false);
+  const [loading, setLoading] = useState(false);
   const [hidePin, setHidePin] = useState(false);
   const [modal, setModal] = useState({ show: false, title: "", message: "" });
   const [toast, setToast] = useState({ show: false, message: "", duration: 3000 });
@@ -48,9 +44,9 @@ export default function Lobby() {
       setPlayers(newPlayers);
       setPlayersCount(newPlayers.length);
       setHostName(data.host || "Host");
-      setJoined(true);
       setHidePin(data.hide)
       setHostStatus(data.isPlayWith)
+      setGameinfo({id: quizId, title: data.quiz.title, slides: data.quiz.questions.length, image_url: data.quiz.image_url});
       if (data.isPlayWith) {
         setPlayers((prevPlayers) => {
           const updated = [data.host, ...prevPlayers];
@@ -118,6 +114,24 @@ export default function Lobby() {
     });
 
   }
+
+  const startGame = () => {
+    setLoading(true);
+    socket.emit("requestStartGame", pin, (data) => {
+      if (data?.success) {
+        navigate(`/lobby/room/playing`, { state: { name, pin } });
+      }
+      else {
+        setLoading(false);
+        if (localStorage.getItem("language") === "vi") {
+          confirmNotify("Lỗi", "Đã xảy ra lỗi khi bắt đầu trò chơi, vui lòng thử lại");
+        }
+        else {
+          confirmNotify("Error", "Something wrong when starting game, please try again later")
+        }
+      }
+    });
+  }
   useEffect(() => {
     const handleSomeoneJoin = (data) => {
       if (data?.name) {
@@ -179,20 +193,23 @@ export default function Lobby() {
         });
       }
     }
+    
+    const handleStartGame = (data) => {
+      if (data?.playNow) {
+        setLoading(true);
+        navigate(`/lobby/room/playing`, { state: { name, pin } });
+      }
+    }
     socket.on("someoneJoin", handleSomeoneJoin);
     socket.on("acceptRequestHidePin", handleAcceptHidePin);
     socket.on("responseKickPlayer", (data) => handleSomeoneLeave(data, localStorage.getItem("language") === "vi" ? "Bạn đã bị đá khỏi phòng chờ" : "You have been kicked from the lobby."));
     socket.on("responseCloseLobby", handleCloseLobby);
     socket.on("responseSomeoneLeave", (data) => handleSomeoneLeave(data, localStorage.getItem("language") === "vi" ? "Rời phòng chờ thành công" : "Leave the lobby successfully."));
-    socket.on("responePlayWith", handlePlayWith)
+    socket.on("responePlayWith", handlePlayWith);
+    socket.on("responseStartGame", handleStartGame);
     socket.emit("getCurrentLobbyState", pin, (data) => {
       if (data?.success) {
-        handleRoomUpdate({
-          pin,
-          host: data.room.host,
-          players: data.room.players,
-          hide: data.room.hide,
-        });
+        handleRoomUpdate(data.room);
         setInitialSetting(data.setting || null);
       }
     });
@@ -203,7 +220,8 @@ export default function Lobby() {
       socket.off("responseKickPlayer", handleSomeoneLeave);
       socket.off("responseSomeoneLeave", handleSomeoneLeave);
       socket.off("responseCloseLobby", handleCloseLobby);
-      socket.off("responePlayWith",handlePlayWith)
+      socket.off("responePlayWith", handlePlayWith);
+      socket.off("responseStartGame", handleStartGame);
     };
   }, [hostName]);
 
@@ -238,14 +256,13 @@ export default function Lobby() {
           <div className="pin-top-bar">
             <div className="pin-game-info">
               <img
-                src="/img/thumb-example.png"
+                src={gameinfo.image_url}
                 alt="Game Thumbnail"
                 className="game-thumbnail"
               />
               <div style={{ textAlign: "left" }}>
                 <h4 className="text-game-detail">{gameinfo.title}</h4>
                 <p className="text-game-detail">{gameinfo.slides} slides</p>
-                <p className="text-game-detail">Author: {gameinfo.author}</p>
               </div>
             </div>
             <img src="/img/icon.png" className="pin-img" />
@@ -255,7 +272,7 @@ export default function Lobby() {
               <div className="pin-actions">
                 <CopyButton textToCopy={pin} style={{ width: "10px", height: "10px" }} name={"btn_copy_pin"} />
                 {role === "host" ? <ShowHideButton name={"btn_hide_pin"} onToggle={(isHidden) => requestHidePin(isHidden)} /> : ""}
-                <ShareButton textToCopy={`Join ${hostName}'s game using PIN: ${pin}. URL: ${origin}/lobby/client/${pin}`} name={"btn_share_lobby"}/>
+                <ShareButton textToCopy={`Join ${hostName}'s game using PIN: ${pin}. URL: ${origin}/lobby/client/${pin}`} name={"btn_share_lobby"} />
               </div>
             </div>
           </div>
@@ -276,7 +293,7 @@ export default function Lobby() {
             </div>
           </div>
 
-          {role === "host" ? <button className="btn" disabled={playersCount === 0}>{t("start_game")}</button> : ""}
+          {role === "host" ? <button className="btn" disabled={playersCount === 0} onClick={startGame}>{t("start_game")}</button> : ""}
           {role === "host" ? <button className="btn" name="playWith" onClick={() => {
             socket.emit("requestPlayWith", pin, (data) => {
               if (!data?.success) {
@@ -286,7 +303,7 @@ export default function Lobby() {
                   confirmNotify("Warning", "Error cannot join everyone");
               }
             })
-          }}>{hostStatus?t("spectator_view"):t("play_with_everyone")}</button> : ""}
+          }}>{hostStatus ? t("spectator_view") : t("play_with_everyone")}</button> : ""}
           <button
             className="btn"
             onClick={() => {
@@ -321,7 +338,7 @@ export default function Lobby() {
               clearSetting={() => setInitialSetting(null)} />
           )}
         </div>
-
+        
         <div
           className={`overlay ${open ? "show" : ""}`}
           onClick={() => setOpen(false)}
@@ -345,6 +362,11 @@ export default function Lobby() {
           buttons={modal.buttons}
           element_name={"modal"}
         />
+        {loading && (
+          <div className="overlay_loading">
+            <span className="loader"></span>
+          </div>
+        )}
       </div>
     </div>
   );

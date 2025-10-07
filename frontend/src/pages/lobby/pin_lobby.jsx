@@ -15,6 +15,7 @@ export default function WelcomePin() {
     const [mode, setMode] = useState("");
     const [loading, setLoading] = useState(false);
     const [modal, setModal] = useState({ show: false, title: "", message: "" });
+    const [quizId, setQuizId] = useState("68df74ac50c3cae46942892c");
     const navigate = useNavigate();
     const notifyDuplicateName = () => {
         setModal({
@@ -80,13 +81,13 @@ export default function WelcomePin() {
 
     const createRoom = () => {
         if (name.trim() !== "") {
-            socket.emit("createRoom", name, (newPin) => {
+            socket.emit("createRoom", name, quizId, (newPin) => {
                 if (newPin.success) {
                     setPin(newPin.pin);
                     setMode("host");
                     setHost(name);
                     setTimeout(function () {
-                        navigate(`/lobby/room`, { state: { name: name, pin: newPin.pin, role: "host" } });
+                        navigate(`/lobby/room`, { state: { name: name, pin: newPin.pin, role: "host", quizId: quizId } });
                     }, 3000);
                 }
                 else {
